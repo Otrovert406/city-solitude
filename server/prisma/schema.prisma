@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  username  String     @unique
+  email     String     @unique
+  password  String
+  avatar    String?
+  bio       String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  places    Place[]
+  reviews   Review[]
+  favorites Favorite[]
+}
+
+model City {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  province String
+  slug     String  @unique
+  places   Place[]
+}
+
+model Place {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  address     String?
+  latitude    Float
+  longitude   Float
+  category    String   @default("OTHER")
+  vibe        String[]
+  images      String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+  city     City   @relation(fields: [cityId], references: [id])
+  cityId   String
+
+  reviews   Review[]
+  favorites Favorite[]
+}
+
+model Review {
+  id      String   @id @default(cuid())
+  content String
+  rating  Int
+  images  String[]
+  user    User     @relation(fields: [userId], references: [id])
+  userId  String
+  place   Place    @relation(fields: [placeId], references: [id])
+  placeId String
+  createdAt DateTime @default(now())
+
+  @@index([placeId])
+}
+
+model Favorite {
+  id      String @id @default(cuid())
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+  place   Place  @relation(fields: [placeId], references: [id])
+  placeId String
+
+  @@unique([userId, placeId])
+  @@index([userId])
+}

@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4f46e5;
+  --color-warm: #f59e0b;
+  --color-calm: #10b981;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+}
