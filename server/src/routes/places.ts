@@ -5,6 +5,19 @@ import { authenticate, optionalAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// Helper: parse JSON strings from DB to arrays
+function formatPlace(p: any) {
+  return {
+    ...p,
+    vibe: safeJsonParse(p.vibe, []),
+    images: safeJsonParse(p.images, []),
+  };
+}
+
+function safeJsonParse(str: string, fallback: any) {
+  try { return JSON.parse(str); } catch { return fallback; }
+}
+
 const placeSchema = z.object({
   title: z.string().min(1).max(100),
   description: z.string().min(1).max(2000),
@@ -25,11 +38,11 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
   const where: any = {};
   if (city) where.cityId = city as string;
   if (category) where.category = category as string;
-  if (vibe) where.vibe = { has: vibe as string };
+  if (vibe) where.vibe = { contains: vibe as string };
   if (search) {
     where.OR = [
-      { title: { contains: search as string, mode: 'insensitive' } },
-      { description: { contains: search as string, mode: 'insensitive' } },
+      { title: { contains: search as string } },
+      { description: { contains: search as string } },
     ];
   }
 
@@ -48,7 +61,12 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
     prisma.place.count({ where }),
   ]);
 
-  res.json({ places, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) });
+  res.json({
+    places: places.map(formatPlace),
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+  });
 });
 
 // GET /api/places/:id
@@ -61,12 +79,8 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
       _count: { select: { favorites: true, reviews: true } },
     },
   });
-  if (!place) {
-    res.status(404).json({ error: '地点不存在' });
-    return;
-  }
+  if (!place) { res.status(404).json({ error: '地点不存在' }); return; }
 
-  // Check if current user favorited
   let isFavorited = false;
   if (req.userId) {
     const fav = await prisma.favorite.findUnique({
@@ -75,7 +89,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
     isFavorited = !!fav;
   }
 
-  res.json({ ...place, isFavorited });
+  res.json({ ...formatPlace(place), isFavorited });
 });
 
 // POST /api/places
@@ -83,13 +97,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const data = placeSchema.parse(req.body);
     const place = await prisma.place.create({
-      data: { ...data, authorId: req.userId! },
+      data: {
+        ...data,
+        vibe: JSON.stringify(data.vibe),
+        images: JSON.stringify(data.images),
+        authorId: req.userId!,
+      },
       include: {
         author: { select: { id: true, username: true, avatar: true } },
         city: { select: { id: true, name: true } },
       },
     });
-    res.status(201).json(place);
+    res.status(201).json(formatPlace(place));
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: '输入数据不合法', details: err.errors });
@@ -102,14 +121,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 // DELETE /api/places/:id
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   const place = await prisma.place.findUnique({ where: { id: req.params.id } });
-  if (!place) {
-    res.status(404).json({ error: '地点不存在' });
-    return;
-  }
-  if (place.authorId !== req.userId) {
-    res.status(403).json({ error: '无权删除此地点' });
-    return;
-  }
+  if (!place) { res.status(404).json({ error: '地点不存在' }); return; }
+  if (place.authorId !== req.userId) { res.status(403).json({ error: '无权删除此地点' }); return; }
   await prisma.place.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });

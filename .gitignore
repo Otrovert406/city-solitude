@@ -6,3 +6,7 @@ build/
 *.log
 .DS_Store
 .prisma/
+server/prisma/dev.db
+server/.env
+client/prisma/dev.db
+client/prisma/seed.ts
