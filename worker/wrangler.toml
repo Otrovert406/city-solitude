@@ -1,0 +1,6 @@
+name = "city-solitude-api"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+[vars]
+VERCEL_API_URL = "https://city-solitude.vercel.app"

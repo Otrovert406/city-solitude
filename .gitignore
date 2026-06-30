@@ -10,3 +10,7 @@ server/prisma/dev.db
 server/.env
 client/prisma/dev.db
 client/prisma/seed.ts
+
+# Deployment artifacts
+client/.netlify/
+.netlify/

@@ -1,0 +1,13 @@
+{
+  "name": "city-solitude-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "npx wrangler deploy",
+    "dev": "npx wrangler dev"
+  },
+  "dependencies": {
+    "hono": "^4.12.27"
+  }
+}

@@ -158,9 +158,27 @@ citiesRouter.get('/', async (_req, res) => {
 // ---- User Routes ----
 const usersRouter = express.Router();
 usersRouter.get('/:id', async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, username: true, avatar: true, bio: true, createdAt: true, _count: { select: { places: true, favorites: true } } } });
+  const user = await prisma.user.findUnique({
+    where: { id: req.params.id },
+    select: {
+      id: true, username: true, avatar: true, bio: true, createdAt: true,
+      _count: { select: { places: true, favorites: true } },
+      places: {
+        take: 12,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, title: true, images: true, category: true, createdAt: true,
+          city: { select: { id: true, name: true } },
+          _count: { select: { favorites: true, reviews: true } },
+        },
+      },
+    },
+  });
   if (!user) return res.status(404).json({ error: '用户不存在' });
-  res.json(user);
+  const placesWithImages = (user.places || []).map(p => ({
+    ...p, images: safeJsonParse(p.images, []),
+  }));
+  res.json({ ...user, places: placesWithImages });
 });
 
 // ---- Upload Route (base64 for serverless) ----

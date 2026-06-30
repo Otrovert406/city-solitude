@@ -4,17 +4,17 @@ import { upload } from '../middleware/upload';
 
 const router = Router();
 
-// POST /api/upload - upload single image
-router.post('/', authenticate, upload.single('image'), (req: AuthRequest, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ error: '请选择图片文件 (jpg/png/webp/gif)' });
+// POST /api/upload - upload single image (base64 JSON, compatible with serverless)
+router.post('/', authenticate, (req: AuthRequest, res: Response) => {
+  const { image } = req.body;
+  if (!image || typeof image !== 'string' || !image.startsWith('data:')) {
+    res.status(400).json({ error: '请提供 base64 图片 (data URL)' });
     return;
   }
-  const url = `/uploads/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename });
+  res.json({ url: image });
 });
 
-// POST /api/upload/multiple - upload multiple images (max 6)
+// POST /api/upload/multiple - upload multiple images (max 6, multipart form-data)
 router.post('/multiple', authenticate, upload.array('images', 6), (req: AuthRequest, res: Response) => {
   const files = req.files as Express.Multer.File[];
   if (!files || files.length === 0) {

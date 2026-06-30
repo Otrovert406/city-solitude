@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../app';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -14,7 +14,8 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       places: {
         take: 12,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true, title: true, images: true, category: true, createdAt: true,
           city: { select: { id: true, name: true } },
           _count: { select: { favorites: true, reviews: true } },
         },
@@ -25,8 +26,18 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     res.status(404).json({ error: '用户不存在' });
     return;
   }
-  res.json(user);
+  // Parse images JSON strings into arrays
+  const placesWithImages = user.places.map((p) => ({
+    ...p,
+    images: safeJsonParse(p.images, []),
+  }));
+  res.json({ ...user, places: placesWithImages });
 });
+
+// Helper — safe JSON parse
+function safeJsonParse(str: string, fallback: any) {
+  try { return JSON.parse(str); } catch { return fallback; }
+}
 
 // GET /api/users/:id/favorites
 router.get('/:id/favorites', async (req: AuthRequest, res: Response) => {
